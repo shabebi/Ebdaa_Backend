@@ -1,0 +1,122 @@
+const express = require("express");
+const cors = require("cors");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const { Pool } = require("pg");
+
+const app = express();
+
+app.use(cors({
+  origin: "*"
+}));
+
+app.use(express.json());
+
+// ✅ ROOT TEST
+app.get("/", (req, res) => {
+  res.send("Backend is running ✅");
+});
+
+// ✅ DATABASE
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
+
+// ✅ STORAGE
+const storage = multer.diskStorage({
+  destination: "uploads/",
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage });
+
+// ✅ SERVE FILES
+app.use("/uploads", express.static("uploads"));
+
+app.post("/upload", upload.single("image"), async (req, res) => {
+  const { key, category } = req.body;
+
+  if (key !== "Ebdaa@2026Admin!") {
+    return res.status(403).send("Unauthorized");
+  }
+
+  try {
+    const result = await cloudinary.uploader.upload(req.file.path);
+
+    const imageUrl = result.secure_url;
+
+    await pool.query(
+      "INSERT INTO images (url, category) VALUES ($1, $2)",
+      [imageUrl, category]
+    );
+
+    res.json({ imageUrl });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Upload error");
+  }
+});
+
+// ✅ GET IMAGES
+app.get("/images/:category", async (req, res) => {
+  const { category } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM images WHERE category = $1 ORDER BY created_at DESC",
+      [category]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error fetching images");
+  }
+});
+
+// ✅ DELETE
+app.delete("/delete/:id", async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query("SELECT * FROM images WHERE id = $1", [id]);
+    const image = result.rows[0];
+
+    if (!image) return res.status(404).send("Not found");
+
+    const filePath = image.url.split("/uploads/")[1];
+
+    if (filePath && fs.existsSync(`uploads/${filePath}`)) {
+      fs.unlinkSync(`uploads/${filePath}`);
+    }
+
+    await pool.query("DELETE FROM images WHERE id = $1", [id]);
+
+    res.send("Deleted");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Delete error");
+  }
+});
+
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET
+});
+
+// ✅ START SERVER
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
