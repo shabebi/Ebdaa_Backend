@@ -18,6 +18,10 @@ app.get("/", (req, res) => {
   res.send("Backend is running ✅");
 });
 
+app.get("/ping", (req, res) => {
+  res.status(200).send("pong");
+});
+
 // ✅ DATABASE
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
