@@ -46,7 +46,7 @@ app.use("/uploads", express.static("uploads"));
 app.post("/upload", upload.single("image"), async (req, res) => {
   const { key, category } = req.body;
 
-  if (key !== "Ebdaa@2026Admin!") {
+  if (key !== process.env.ADMIN_KEY) {
     return res.status(403).send("Unauthorized");
   }
 
@@ -121,6 +121,14 @@ cloudinary.config({
 // ✅ START SERVER
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled Rejection:", err);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+});
+
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
