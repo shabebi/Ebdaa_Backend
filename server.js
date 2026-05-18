@@ -121,6 +121,24 @@ app.delete("/delete/:id", async (req, res) => {
   }
 });
 
+// ✅ GET VIDEOS FOR IMAGE
+app.get("/image-video/:imageId", async (req, res) => {
+  const { imageId } = req.params;
+
+  try {
+    const result = await pool.query(
+      "SELECT * FROM image_videos WHERE image_id = $1",
+      [imageId]
+    );
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error fetching video");
+  }
+});
+
 const cloudinary = require("cloudinary").v2;
 
 cloudinary.config({
