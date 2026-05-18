@@ -139,6 +139,59 @@ app.get("/image-video/:imageId", async (req, res) => {
   }
 });
 
+// ✅ ADD VIDEO URL
+app.post("/add-video", async (req, res) => {
+
+  const {
+    key,
+    image_id,
+    youtube_url
+  } = req.body;
+
+  if (key !== process.env.ADMIN_KEY) {
+    return res.status(403).send("Unauthorized");
+  }
+
+  try {
+
+    await pool.query(
+      `
+      INSERT INTO image_videos
+      (image_id, youtube_url)
+      VALUES ($1, $2)
+      `,
+      [image_id, youtube_url]
+    );
+
+    res.send("Video Added");
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Error adding video");
+  }
+
+});
+
+// ✅ DELETE VIDEO
+app.delete("/delete-video/:id", async (req, res) => {
+
+  const { id } = req.params;
+
+  try {
+
+    await pool.query(
+      "DELETE FROM image_videos WHERE id = $1",
+      [id]
+    );
+
+    res.send("Video deleted");
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Delete video error");
+  }
+
+});
 const cloudinary = require("cloudinary").v2;
 
 cloudinary.config({
